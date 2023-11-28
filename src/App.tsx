@@ -1,88 +1,85 @@
-import React, { Component } from "react";
-import { Flex, Box, Text, Heading } from "rebass";
-import styled from "styled-components";
-import logo from "./logo.svg";
-import { FormComponent, FormContainer } from "react-authorize-net";
-import R from "ramda";
+import React, { useState, FormEvent } from 'react';
+import { PaymentData, useAcceptJs} from 'react-acceptjs';
+import { ErrorMessage } from 'react-acceptjs/dist/types';
 
-let clientKey = process.env.REACT_APP_AUTHORIZENET_CLIENTKEY as string;
-let apiLoginId = process.env.REACT_APP_AUTHORIZENET_LOGINID as string;
-
-type State = {
-  status: "paid" | "unpaid" | ["failure", string[]];
+const authData = {
+  apiLoginID: '9HscE77J',
+  clientKey: '63cTd8d69BmC7ZGaFW7k4tsApAKs46uzEnHFg8muBQ98WtC74W7MzEbnTRNJ4Z5Z',
 };
 
-const Button = styled.button({
-  "&:hover": { cursor: "pointer" },
-  padding: "10px",
-  backgroundColor: "white",
-  border: "2px solid black",
-  fontWeight: 600,
-  borderRadius: "2px"
-});
+type BasicCardInfo = {
+  cardNumber: string;
+  cardCode: string;
+  month: string;
+  year: string;
+};
 
-const ErrorComponent = (props: {
-  errors: string[];
-  onBackButtonClick: () => void;
-}) => (
-  <div>
-    <Text fontSize={3} fontWeight={"500"} mb={3}>
-      Failed to process payment
-    </Text>
-    {props.errors.map(error => (
-      <Text py={2}>{error}</Text>
-    ))}
-    <Button onClick={props.onBackButtonClick}>Go Back</Button>
-  </div>
-);
+type AppProps = {};
 
-const Header = props => (
-  <Flex py={4}>
-    <Heading>react-authorize-net-example</Heading>
-  </Flex>
-);
+const App: React.FC<AppProps> = () => {
+  const { dispatchData, loading, error } = useAcceptJs({ authData });
+  const [cardData, setCardData] = useState<BasicCardInfo>({
+    cardNumber: '',
+    month: '',
+    year: '',
+    cardCode: '',
+  });
 
-class App extends Component<{}, State> {
-  state: State = { status: "unpaid" };
 
-  onErrorHandler = (response: any) => {
-    this.setState({
-      status: ["failure", response.messages.message.map(err => err.text)]
-    });
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+      console.log(cardData);
+      dispatchData({cardData}).then((response)=>{console.log('Token:', response.opaqueData.dataValue)}).catch((error)=>{console.table(error.messages.message)})
+      
   };
 
-  onSuccessHandler = (response: any) => {
-    // Process API response on your backend...
-    this.setState({ status: ["failure", []] });
-  };
-
-  render() {
-    return (
-      <Box className="App" p={3}>
-        <Header />
-        {this.state.status === "paid" ? (
-          <Text fontWeight={"500"} fontSize={3} mb={4}>
-            Thank you for your payment!
-          </Text>
-        ) : this.state.status === "unpaid" ? (
-          <FormContainer
-            environment="sandbox"
-            onError={this.onErrorHandler}
-            onSuccess={this.onSuccessHandler}
-            amount={23}
-            component={FormComponent}
-            clientKey={clientKey}
-            apiLoginId={apiLoginId}
-          />
-        ) : this.state.status[0] === "failure" ? (
-          <ErrorComponent
-            onBackButtonClick={() => this.setState({ status: "unpaid" })}
-            errors={this.state.status[1]}
-          />
-        ) : null}
-      </Box>
-    );
-  }
-}
+  return (
+    <form onSubmit={handleSubmit}>
+      <label htmlFor='cardNumber'>Card Number</label>
+      <input
+        type="text"
+        name="cardNumber"
+        id="cardNumber"
+        value={cardData.cardNumber}
+        onChange={(event) =>
+          setCardData({ ...cardData, cardNumber: event.target.value })
+        }
+      />
+            <label htmlFor='month'>Month</label>
+      <input
+        type="text"
+        name="month"
+        id="month"
+        value={cardData.month}
+        onChange={(event) =>
+          setCardData({ ...cardData, month: event.target.value })
+        }
+      />
+            <label htmlFor='year'>Year</label>
+      <input
+        type='text'
+        name="year"
+        id="year"
+        value={cardData.year}
+        onChange={(event) =>
+          setCardData({ ...cardData, year: event.target.value })
+        }
+      />
+            <label htmlFor='cvv'>CVV</label>
+      <input
+        type="text"
+        name="cardCode"
+        id="cvv"
+        value={cardData.cardCode}
+        onChange={(event) =>
+          setCardData({ ...cardData, cardCode: event.target.value })
+        }
+      />
+      <button type="submit" disabled={loading||error}>
+        Pay
+      </button>
+    </form>
+  );
+};
 
 export default App;
